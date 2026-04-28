@@ -23,39 +23,21 @@ When a coding agent (Claude, Copilot, Cursor, etc.) makes changes in your reposi
 
 ## Installation
 
-### Option 1: Remote Installer (Recommended)
+The fastest way to install is the remote installer:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/drmaas/agentlog/main/scripts/install.sh | sh
 ```
 
-The installer detects your platform and prefers a GitHub release binary. It falls back to `go install` if no binary is available.
+It detects your platform and uses prebuilt release binaries when available, falling back to `go install` if needed.
 
-### Option 2: Go Install
-
-```bash
-go install github.com/drmaas/agentlog/cmd/agentlog@latest
-```
-
-### Setup in a Repository
-
-After installation, run inside any git repository:
+Once installed, initialize AgentLog in your git repository:
 
 ```bash
 agentlog install
 ```
 
-This installs:
-- A `prepare-commit-msg` git hook that tags commits with the active session ID
-- `.agentlog/config.yaml` (default config)
-- `.agentlog/skill/SKILL.md` — an agent skill file
-- An entry in `.gitignore` for local session files
-
-To install the skill globally (shared across repositories):
-
-```bash
-agentlog install --global
-```
+This sets up a git hook, configuration, and a skill file for integration with coding agents.
 
 ## Usage
 
@@ -153,9 +135,11 @@ backends:
   - type: mybackend
 ```
 
-## Building from Source
+## Development
 
-Clone and build the repository:
+### Building from Source
+
+Clone the repository and build locally:
 
 ```bash
 git clone https://github.com/drmaas/agentlog
@@ -170,9 +154,36 @@ Run the locally-built binary:
 ./agentlog install
 ```
 
+### Code Organization
+
+- `cmd/agentlog/` — CLI entrypoint
+- `pkg/agentlog/` — Core library interfaces and types
+- `internal/backends/` — Storage backend implementations
+- `internal/mcp/` — MCP server over stdin/stdout
+- `hooks/` — Git hook embedded by `agentlog install`
+
+### Custom Backends
+
+Implement the `StorageBackend` interface and register with `RegisterBackend()`:
+
+```go
+type StorageBackend interface {
+    StartSession(...) error
+    LogExchange(...) error
+    LinkCommit(...) error
+    // ... other methods
+}
+
+func init() {
+    agentlog.RegisterBackend("mybackend", func() agentlog.StorageBackend {
+        return &Backend{}
+    })
+}
+```
+
 ## Release Process
 
-Tagged releases automatically publish platform-specific binaries via GitHub Actions.
+Tagged releases automatically publish cross-platform binaries via GitHub Actions.
 
 ### For Maintainers
 
@@ -189,13 +200,7 @@ The workflow builds binaries for:
 - `darwin/amd64`
 - `darwin/arm64`
 
-Published assets:
-- `agentlog_linux_amd64.tar.gz`
-- `agentlog_linux_arm64.tar.gz`
-- `agentlog_darwin_amd64.tar.gz`
-- `agentlog_darwin_arm64.tar.gz`
-
-These binaries are automatically available to the remote installer (`curl | sh`).
+Published assets are named `agentlog_{os}_{arch}.tar.gz` and are automatically available to the remote installer.
 
 ## License
 
