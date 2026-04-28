@@ -1,0 +1,4 @@
+.agentlog/sessions/
+.agentlog/active_session.json
+/agentlog
+
