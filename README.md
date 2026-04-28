@@ -23,13 +23,21 @@ When a coding agent (Claude, Copilot, Cursor, etc.) makes changes in your reposi
 
 ## Installation
 
-The fastest way to install is the remote installer:
+### Linux & macOS
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/drmaas/agentlog/main/scripts/install.sh | sh
 ```
 
-It detects your platform and uses prebuilt release binaries when available, falling back to `go install` if needed.
+### Windows
+
+```powershell
+powershell -ExecutionPolicy Bypass -Command "& { $(irm https://raw.githubusercontent.com/drmaas/agentlog/main/scripts/install.ps1) }"
+```
+
+Both installers detect your architecture and use prebuilt release binaries when available, falling back to `go install` if needed.
+
+### Setup in Repository
 
 Once installed, initialize AgentLog in your git repository:
 
@@ -190,8 +198,7 @@ Tagged releases automatically publish cross-platform binaries via GitHub Actions
 Create and push a semantic version tag to trigger the release workflow:
 
 ```bash
-git tag v0.0.1
-git push origin v0.0.1
+git tag v0.0.1 && git push origin v0.0.1
 ```
 
 The workflow builds binaries for:
@@ -199,8 +206,10 @@ The workflow builds binaries for:
 - `linux/arm64`
 - `darwin/amd64`
 - `darwin/arm64`
+- `windows/amd64`
+- `windows/arm64`
 
-Published assets are named `agentlog_{os}_{arch}.tar.gz` and are automatically available to the remote installer.
+Published assets are named `agentlog_{os}_{arch}.tar.gz` (Unix) or `agentlog_{os}_{arch}.zip` (Windows) and are automatically available to the remote installers.
 
 ## License
 

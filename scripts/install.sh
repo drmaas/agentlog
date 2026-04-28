@@ -24,6 +24,7 @@ detect_os() {
 	case "$(uname -s)" in
 		Linux) printf 'linux' ;;
 		Darwin) printf 'darwin' ;;
+		MINGW*|MSYS*|CYGWIN*) printf 'windows' ;;
 		*) fail "unsupported OS: $(uname -s)" ;;
 	esac
 }
@@ -75,6 +76,13 @@ install_from_go() {
 
 main() {
 	os="$(detect_os)"
+	
+	# Redirect Windows users to PowerShell installer
+	if [ "$os" = "windows" ]; then
+		fail "Please use the PowerShell installer for Windows:
+		powershell -ExecutionPolicy Bypass -Command \"& { \$(irm https://raw.githubusercontent.com/drmaas/agentlog/main/scripts/install.ps1) }\""
+	fi
+	
 	arch="$(detect_arch)"
 	asset="agentlog_${os}_${arch}.tar.gz"
 
