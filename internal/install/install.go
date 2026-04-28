@@ -77,15 +77,25 @@ func Run(opts Options, cwd string) error {
 }
 
 func installSkill(claudeRoot string) error {
-	skillPath := filepath.Join(claudeRoot, "skills", "agentlog.md")
-	if err := os.MkdirAll(filepath.Dir(skillPath), 0o755); err != nil {
+	skillDir := filepath.Join(claudeRoot, "skills", "agentlog")
+	refsDir := filepath.Join(skillDir, "references")
+	if err := os.MkdirAll(refsDir, 0o755); err != nil {
 		return err
 	}
+
 	skill, err := templateFS.ReadFile("templates/skill.md")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(skillPath, skill, 0o644)
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), skill, 0o644); err != nil {
+		return err
+	}
+
+	exchange, err := templateFS.ReadFile("templates/exchange-format.md")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(refsDir, "EXCHANGE-FORMAT.md"), exchange, 0o644)
 }
 
 func setupAgentlogDir(parent string) error {
@@ -177,16 +187,16 @@ func printCompletionMessage(opts Options, claudeRoot, installRoot string) {
 	if opts.HookOnly {
 		fmt.Println("Git hook installed: prepare-commit-msg hook tagged commits with session IDs")
 	} else if opts.SkillOnly {
-		fmt.Printf("✓ Skill installed:  %s/agentlog.md\n", claudeRoot)
+		fmt.Printf("✓ Skill installed:  %s/skills/agentlog/SKILL.md\n", claudeRoot)
 		fmt.Println("  Agents can now call agentlog_start, agentlog_log, agentlog_end, etc.")
 	} else if opts.Global {
-		fmt.Printf("✓ Global skill:     %s/skills/agentlog.md\n", claudeRoot)
+		fmt.Printf("✓ Global skill:     %s/skills/agentlog/SKILL.md\n", claudeRoot)
 		fmt.Printf("  Config template:  %s/config.yaml\n", agentlogPath)
 		fmt.Println()
 		fmt.Println("  The global skill is available to all projects.")
 		fmt.Println("  Create project-specific configs in each repo: .agentlog/config.yaml")
 	} else {
-		fmt.Printf("✓ Local skill:      %s/skills/agentlog.md\n", claudeRoot)
+		fmt.Printf("✓ Local skill:      %s/skills/agentlog/SKILL.md\n", claudeRoot)
 		fmt.Printf("  Config:           %s/config.yaml\n", agentlogPath)
 		fmt.Printf("  Sessions folder:  %s/sessions/\n", agentlogPath)
 		fmt.Println()
