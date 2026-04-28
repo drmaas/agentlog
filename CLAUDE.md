@@ -76,6 +76,18 @@ Add new backend types by implementing `StorageBackend` and registering with `Reg
 2. Add dispatch in `internal/mcp/server.go` → `callTool()`
 3. The underlying logic should live in `Manager`
 
+## Testing Install & Global Setup
+
+**⚠️ IMPORTANT**: When testing `agentlog install --global`, DO NOT delete `~/.agentlog` or `~/.claude` directories. These are user-level directories shared across all projects. Deleting them will break the user's global AgentLog installation.
+
+**Safe testing approach for `--global` installs:**
+1. Use isolated directories in `/tmp` or test directories instead of home
+2. Or use a separate user account for testing
+3. Or test using `--global` in a sandbox/container environment
+4. Verify behavior by checking directory contents and file creation, not by deleting and recreating
+
+For local installs (default), it's safe to delete `.agentlog/` and `.claude/` within test repos since they are project-specific.
+
 ## Runtime File Layout
 
 ```
