@@ -4,6 +4,37 @@
 
 AgentLog is a prompt audit log that links coding agent sessions (user requests + agent summaries) to git commits. It answers: *what was requested and what changed?* Git captures *what* changed; AgentLog captures *why*.
 
+## Prerequisites
+
+- **Go 1.21+** (check with `go version`)
+- **Git** (for commit history and hook installation)
+- **Bash** (for install and hook scripts)
+
+## Quick Start
+
+First-time contributors:
+
+```bash
+# Clone and navigate
+git clone https://github.com/drmaas/agentlog.git
+cd agentlog
+
+# Build the binary
+go build ./cmd/agentlog/...
+
+# Run tests to verify setup
+go test ./...
+
+# Install locally to current project
+./agentlog install
+```
+
+For a global installation (affects all projects):
+
+```bash
+./agentlog install --global
+```
+
 ## Build & Test
 
 ```bash
@@ -76,17 +107,71 @@ Add new backend types by implementing `StorageBackend` and registering with `Reg
 2. Add dispatch in `internal/mcp/server.go` → `callTool()`
 3. The underlying logic should live in `Manager`
 
+## Testing the MCP Server Locally
+
+To test the MCP server without a full agent setup:
+
+```bash
+# Build the binary
+go build ./cmd/agentlog/...
+
+# Start the MCP server (runs on stdin/stdout)
+./agentlog mcp
+
+# In another terminal, send a JSON-RPC 2.0 request
+echo '{"jsonrpc":"2.0","method":"initialize","params":{},"id":1}' | ./agentlog mcp
+```
+
+For manual testing with tools:
+
+```bash
+# Start server
+./agentlog mcp
+
+# Send tool call (e.g., GetSessions)
+echo '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"GetSessions","arguments":{}},"id":2}' | ./agentlog mcp
+```
+
+Verify the MCP server in integration tests with `internal/mcp/*_test.go`.
+
 ## Testing Install & Global Setup
 
-**⚠️ IMPORTANT**: When testing `agentlog install --global`, DO NOT delete `~/.agentlog` or `~/.claude` directories. These are user-level directories shared across all projects. Deleting them will break the user's global AgentLog installation.
+**⚠️ CRITICAL**: When testing `agentlog install --global`, NEVER delete `~/.agentlog`, `~/.claude`, or any other global user directories. These are user-level directories shared across all projects and all tools. Deleting them will break the user's entire setup and any other tools that depend on them.
 
 **Safe testing approach for `--global` installs:**
-1. Use isolated directories in `/tmp` or test directories instead of home
-2. Or use a separate user account for testing
-3. Or test using `--global` in a sandbox/container environment
-4. Verify behavior by checking directory contents and file creation, not by deleting and recreating
 
-For local installs (default), it's safe to delete `.agentlog/` and `.claude/` within test repos since they are project-specific.
+1. **Use a temporary home directory** (preferred):
+   ```bash
+   # Create an isolated test environment
+   TEST_HOME=$(mktemp -d)
+   export HOME="$TEST_HOME"
+   # Run install and tests
+   ./agentlog install --global
+   # Clean up after
+   rm -rf "$TEST_HOME"
+   ```
+
+2. **Use environment variable overrides**:
+   - Override `AGENTLOG_HOME` or `XDG_DATA_HOME` to point to a test directory instead of `~/.agentlog`
+   - This allows testing installation logic without touching actual user directories
+
+3. **Mock the directories in tests**:
+   - Use Go's `os.TempDir()` and test fixtures
+   - Mock the home directory lookup to return a test path
+   - Verify files are created/linked in the right places without actually using user directories
+
+4. **Use container/VM isolation**:
+   - Run tests in Docker or a virtual machine where it's safe to modify a test user's home
+   - Ensures complete isolation
+
+5. **Verify with `--dry-run` or introspection** (if implemented):
+   - Check what would be installed without actually installing
+   - Inspect file paths and permissions without modifying the system
+
+**For local/project-level installs** (the default, without `--global`):
+- It is safe to delete `.agentlog/` and `.claude/` within test repos since they are project-specific and not shared
+
+**Key principle**: Global state affects all users and all projects. Test it in isolation, never by modifying actual user directories.
 
 ## Runtime File Layout
 
