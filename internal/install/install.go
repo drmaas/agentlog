@@ -21,22 +21,20 @@ type Options struct {
 
 func Run(opts Options, cwd string) error {
 	home, _ := os.UserHomeDir()
-	
-	// Determine install roots
-	var claudeRoot, agentlogRoot string
 	repoRoot, isGit := agentlog.FindRepoRoot(cwd)
 	
+	// Determine install roots (parent directories)
+	var installRoot string
+	
 	if opts.Global {
-		// Global: ~/.claude for skills, ~/.agentlog for config/sessions
-		claudeRoot = filepath.Join(home, ".claude")
-		agentlogRoot = filepath.Join(home, ".agentlog")
+		installRoot = home
 	} else {
-		// Local: repo/.claude for skills, repo/.agentlog for config/sessions
-		claudeRoot = filepath.Join(repoRoot, ".claude")
-		agentlogRoot = filepath.Join(repoRoot, ".agentlog")
+		installRoot = repoRoot
 	}
 
-	// Install skill to .claude (always unless --hook-only or --skill-only with --global)
+	claudeRoot := filepath.Join(installRoot, ".claude")
+
+	// Install skill to .claude (always unless --hook-only)
 	if !opts.HookOnly {
 		if err := installSkill(claudeRoot); err != nil {
 			return err
@@ -45,7 +43,7 @@ func Run(opts Options, cwd string) error {
 
 	// Setup .agentlog directory and config (local repos unless --skill-only or --global)
 	if !opts.SkillOnly && !opts.Global && !opts.HookOnly {
-		if err := setupAgentlogDir(agentlogRoot); err != nil {
+		if err := setupAgentlogDir(installRoot); err != nil {
 			return err
 		}
 		if isGit {
@@ -67,16 +65,14 @@ func Run(opts Options, cwd string) error {
 		}
 	}
 
-	// For --global with --skill-only, just install skill
-	// For --global without flags, just install global skill
-	// (Global installs don't setup .agentlog unless explicitly --skill-only is NOT set)
+	// For --global without --skill-only, setup config
 	if opts.Global && !opts.SkillOnly {
-		if err := setupAgentlogConfig(agentlogRoot); err != nil {
+		if err := setupAgentlogConfig(installRoot); err != nil {
 			return err
 		}
 	}
 
-	printCompletionMessage(opts, claudeRoot, agentlogRoot)
+	printCompletionMessage(opts, claudeRoot, installRoot)
 	return nil
 }
 
@@ -92,16 +88,19 @@ func installSkill(claudeRoot string) error {
 	return os.WriteFile(skillPath, skill, 0o644)
 }
 
-func setupAgentlogDir(agentlogRoot string) error {
+func setupAgentlogDir(parent string) error {
+	// parent should be the repo root
+	agentlogPath := filepath.Join(parent, ".agentlog")
+	
 	// Create directory structure
 	for _, dir := range []string{"", "sessions", "skill", filepath.Join("skill", "references")} {
-		if err := os.MkdirAll(filepath.Join(agentlogRoot, dir), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Join(agentlogPath, dir), 0o755); err != nil {
 			return err
 		}
 	}
 
 	// Write config
-	if err := setupAgentlogConfig(agentlogRoot); err != nil {
+	if err := setupAgentlogConfig(parent); err != nil {
 		return err
 	}
 
@@ -110,7 +109,7 @@ func setupAgentlogDir(agentlogRoot string) error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(agentlogRoot, "skill", "SKILL.md"), skill, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(agentlogPath, "skill", "SKILL.md"), skill, 0o644); err != nil {
 		return err
 	}
 
@@ -118,20 +117,22 @@ func setupAgentlogDir(agentlogRoot string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(agentlogRoot, "skill", "references", "EXCHANGE-FORMAT.md"), exchange, 0o644)
+	return os.WriteFile(filepath.Join(agentlogPath, "skill", "references", "EXCHANGE-FORMAT.md"), exchange, 0o644)
 }
 
-func setupAgentlogConfig(agentlogRoot string) error {
-	if err := os.MkdirAll(agentlogRoot, 0o755); err != nil {
+func setupAgentlogConfig(parent string) error {
+	// parent should be the repo root or home directory
+	agentlogPath := filepath.Join(parent, ".agentlog")
+	if err := os.MkdirAll(agentlogPath, 0o755); err != nil {
 		return err
 	}
 	// Check if config already exists
-	configPath := filepath.Join(agentlogRoot, "config.yaml")
+	configPath := filepath.Join(agentlogPath, "config.yaml")
 	if _, err := os.Stat(configPath); err == nil {
 		return nil // Config already exists
 	}
 	// Write default config
-	return agentlog.WriteDefaultConfig(agentlogRoot)
+	return agentlog.WriteDefaultConfig(parent)
 }
 
 func installHook(root string) error {
@@ -167,9 +168,11 @@ func ensureGitignore(root string) error {
 	return os.WriteFile(path, []byte(out), 0o644)
 }
 
-func printCompletionMessage(opts Options, claudeRoot, agentlogRoot string) {
+func printCompletionMessage(opts Options, claudeRoot, installRoot string) {
 	fmt.Println("✓ AgentLog installed successfully")
 	fmt.Println()
+
+	agentlogPath := filepath.Join(installRoot, ".agentlog")
 
 	if opts.HookOnly {
 		fmt.Println("Git hook installed: prepare-commit-msg hook tagged commits with session IDs")
@@ -178,14 +181,14 @@ func printCompletionMessage(opts Options, claudeRoot, agentlogRoot string) {
 		fmt.Println("  Agents can now call agentlog_start, agentlog_log, agentlog_end, etc.")
 	} else if opts.Global {
 		fmt.Printf("✓ Global skill:     %s/skills/agentlog.md\n", claudeRoot)
-		fmt.Printf("  Config template:  %s/config.yaml\n", agentlogRoot)
+		fmt.Printf("  Config template:  %s/config.yaml\n", agentlogPath)
 		fmt.Println()
 		fmt.Println("  The global skill is available to all projects.")
 		fmt.Println("  Create project-specific configs in each repo: .agentlog/config.yaml")
 	} else {
 		fmt.Printf("✓ Local skill:      %s/skills/agentlog.md\n", claudeRoot)
-		fmt.Printf("  Config:           %s/config.yaml\n", agentlogRoot)
-		fmt.Printf("  Sessions folder:  %s/sessions/\n", agentlogRoot)
+		fmt.Printf("  Config:           %s/config.yaml\n", agentlogPath)
+		fmt.Printf("  Sessions folder:  %s/sessions/\n", agentlogPath)
 		fmt.Println()
 		fmt.Println("  Agents can now log exchanges. Run: agentlog start; agentlog log; agentlog end")
 	}
