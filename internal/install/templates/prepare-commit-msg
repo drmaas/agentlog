@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MSG_FILE="$1"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [[ -z "${REPO_ROOT}" ]]; then
+  exit 0
+fi
+
+ACTIVE_FILE="${REPO_ROOT}/.agentlog/active_session.json"
+if [[ ! -f "${ACTIVE_FILE}" ]]; then
+  exit 0
+fi
+
+SESSION_ID="$(grep -o '"session_id"[[:space:]]*:[[:space:]]*"[^"]*"' "${ACTIVE_FILE}" | sed -E 's/.*"([^"]+)".*/\1/' || true)"
+if [[ -z "${SESSION_ID}" ]]; then
+  exit 0
+fi
+
+if grep -q "AgentLog-Session:" "${MSG_FILE}"; then
+  exit 0
+fi
+
+{
+  echo ""
+  echo "AgentLog-Session: ${SESSION_ID}"
+} >> "${MSG_FILE}"
