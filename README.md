@@ -27,6 +27,29 @@ When a coding agent (Claude, Copilot, Cursor, etc.) makes changes in your reposi
 go install github.com/drmaas/agentlog/cmd/agentlog@latest
 ```
 
+Or install with the remote shell installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/drmaas/agentlog/main/scripts/install.sh | sh
+```
+
+The installer prefers a GitHub release binary for your platform and falls back to
+`go install` when a release artifact is not available.
+
+Tagged releases publish these assets automatically:
+
+- `agentlog_linux_amd64.tar.gz`
+- `agentlog_linux_arm64.tar.gz`
+- `agentlog_darwin_amd64.tar.gz`
+- `agentlog_darwin_arm64.tar.gz`
+
+Create the first release with:
+
+```bash
+git tag v0.0.1
+git push origin v0.0.1
+```
+
 Then, inside a git repository:
 
 ```bash
