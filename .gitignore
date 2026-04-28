@@ -1,4 +1,4 @@
 .agentlog/
 .claude/
 /agentlog
-
+.agentlog/sessions/
