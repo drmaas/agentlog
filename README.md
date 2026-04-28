@@ -23,34 +23,23 @@ When a coding agent (Claude, Copilot, Cursor, etc.) makes changes in your reposi
 
 ## Installation
 
-```bash
-go install github.com/drmaas/agentlog/cmd/agentlog@latest
-```
-
-Or install with the remote shell installer:
+### Option 1: Remote Installer (Recommended)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/drmaas/agentlog/main/scripts/install.sh | sh
 ```
 
-The installer prefers a GitHub release binary for your platform and falls back to
-`go install` when a release artifact is not available.
+The installer detects your platform and prefers a GitHub release binary. It falls back to `go install` if no binary is available.
 
-Tagged releases publish these assets automatically:
-
-- `agentlog_linux_amd64.tar.gz`
-- `agentlog_linux_arm64.tar.gz`
-- `agentlog_darwin_amd64.tar.gz`
-- `agentlog_darwin_arm64.tar.gz`
-
-Create the first release with:
+### Option 2: Go Install
 
 ```bash
-git tag v0.0.1
-git push origin v0.0.1
+go install github.com/drmaas/agentlog/cmd/agentlog@latest
 ```
 
-Then, inside a git repository:
+### Setup in a Repository
+
+After installation, run inside any git repository:
 
 ```bash
 agentlog install
@@ -59,10 +48,10 @@ agentlog install
 This installs:
 - A `prepare-commit-msg` git hook that tags commits with the active session ID
 - `.agentlog/config.yaml` (default config)
-- `.agentlog/skill/SKILL.md` — an agent skill file telling the agent how to use AgentLog
-- An entry in `.gitignore` so session files stay local
+- `.agentlog/skill/SKILL.md` — an agent skill file
+- An entry in `.gitignore` for local session files
 
-To install skill files globally (shared across all repos):
+To install the skill globally (shared across repositories):
 
 ```bash
 agentlog install --global
@@ -166,12 +155,47 @@ backends:
 
 ## Building from Source
 
+Clone and build the repository:
+
 ```bash
 git clone https://github.com/drmaas/agentlog
 cd agentlog
 go build ./cmd/agentlog/...
 go test ./...
 ```
+
+Run the locally-built binary:
+
+```bash
+./agentlog install
+```
+
+## Release Process
+
+Tagged releases automatically publish platform-specific binaries via GitHub Actions.
+
+### For Maintainers
+
+Create and push a semantic version tag to trigger the release workflow:
+
+```bash
+git tag v0.0.1
+git push origin v0.0.1
+```
+
+The workflow builds binaries for:
+- `linux/amd64`
+- `linux/arm64`
+- `darwin/amd64`
+- `darwin/arm64`
+
+Published assets:
+- `agentlog_linux_amd64.tar.gz`
+- `agentlog_linux_arm64.tar.gz`
+- `agentlog_darwin_amd64.tar.gz`
+- `agentlog_darwin_arm64.tar.gz`
+
+These binaries are automatically available to the remote installer (`curl | sh`).
 
 ## License
 
