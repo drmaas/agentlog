@@ -105,7 +105,13 @@ func ensureGitignore(root string) error {
 }
 
 func printMCPSnippet() {
-	fmt.Println("Add this to your agent's MCP configuration:")
+	fmt.Println("✓ Skill installed: AgentLog can now log agent exchanges")
+	fmt.Println()
+	fmt.Println("The skill instructs agents to call: agentlog log --request <...> --summary <...>")
+	fmt.Println("Each call records the agent's intent and changes to the commit log.")
+	fmt.Println()
+	fmt.Println("Optional: For agents that prefer direct tool calls (MCP),")
+	fmt.Println("add this to your agent's MCP configuration:")
 	fmt.Println()
 	fmt.Println("{")
 	fmt.Println(`  "mcpServers": {`)
